@@ -10,6 +10,7 @@ import ARKit
 import AVFoundation
 import CoreImage
 
+@available(iOS 11.0,*)
 public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
   private var writer: AVAssetWriter!
   private var videoInput: AVAssetWriterInput!
@@ -115,7 +116,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
     self.options.videoSize = options.videoSize
 
     writer = try! AVAssetWriter(outputURL: self.options.outputUrl,
-                                fileType: self.options.fileType)
+                                fileType: AVFileType(rawValue: self.options.fileType))
     setupVideo()
     if self.useAudio {
       setupAudio()
@@ -141,7 +142,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
   private func setupAudio () {
 
-    let device: AVCaptureDevice = AVCaptureDevice.defaultDevice(withMediaType: AVMediaTypeAudio)
+    let device: AVCaptureDevice = AVCaptureDevice.default(for: AVMediaType.audio)!
     guard device.isConnected else {
       self.options.useMicrophone = false
       return
@@ -155,14 +156,14 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
     captureSession = AVCaptureSession.init()
 
-    captureSession.sessionPreset = AVCaptureSessionPresetMedium
+    captureSession.sessionPreset = AVCaptureSession.Preset.medium
 
     captureSession.addInput(audioCaptureInput)
     captureSession.addOutput(audioCaptureOutput)
 
-    self.audioSettings = audioCaptureOutput.recommendedAudioSettingsForAssetWriter(withOutputFileType: AVFileTypeAppleM4V) as? [String : Any]
+    self.audioSettings = audioCaptureOutput.recommendedAudioSettingsForAssetWriter(writingTo: AVFileType.m4v) as? [String : Any]
 
-    self.audioInput = AVAssetWriterInput(mediaType: AVMediaTypeAudio, outputSettings: audioSettings )
+    self.audioInput = AVAssetWriterInput(mediaType: AVMediaType.audio, outputSettings: audioSettings )
 
     self.audioInput.expectsMediaDataInRealTime = true
 
@@ -175,7 +176,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
   func setupVideo() {
 
-    self.videoInput = AVAssetWriterInput(mediaType: AVMediaTypeVideo,
+    self.videoInput = AVAssetWriterInput(mediaType: AVMediaType.video,
                                          outputSettings: self.options.assetWriterVideoInputSettings)
 
     self.videoInput.mediaTimeScale = self.options.timeScale

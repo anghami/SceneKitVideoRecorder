@@ -8,6 +8,7 @@ import UIKit
 import SceneKit
 import AVFoundation
 
+@available(iOS 11.0, *)
 extension SceneKitVideoRecorder {
   public struct Options {
     public var timeScale: Int32
@@ -25,7 +26,7 @@ extension SceneKitVideoRecorder {
                      videoSize: CGSize(width: 720, height: 1280),
                      fps: 60,
                      outputUrl: URL(fileURLWithPath: NSTemporaryDirectory() + "output.mp4"),
-                     fileType: AVFileTypeAppleM4V,
+                     fileType: AVFileType.m4v.rawValue,
                      codec: AVVideoCodecH264,
                      deleteFileIfExists: true,
                      useMicrophone: true,

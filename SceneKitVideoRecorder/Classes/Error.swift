@@ -6,6 +6,7 @@
 
 import UIKit
 
+@available(iOS 11.0, *)
 extension SceneKitVideoRecorder {
   public struct VideoSizeError: Error {}
   public struct PreparationError: Error {
