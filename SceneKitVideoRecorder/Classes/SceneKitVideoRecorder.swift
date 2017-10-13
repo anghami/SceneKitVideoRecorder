@@ -59,6 +59,8 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
   public var updateFrameHandler: ((_ image: UIImage) -> Void)? = nil
   private var finishedCompletionHandler: ((_ url: URL) -> Void)? = nil
 
+  static var segmentsCount : Int = 0;
+    
   @available(iOS 11.0, *)
   public convenience init(withARSCNView view: ARSCNView, options: Options = .default) throws {
     try self.init(scene: view, options: options)
@@ -131,10 +133,11 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
     if options.deleteFileIfExists {
       let nameOnly = (options.outputUrl.lastPathComponent as NSString).deletingPathExtension
       let fileExt  = (options.outputUrl.lastPathComponent as NSString).pathExtension
-      let tempFileName = NSTemporaryDirectory() + nameOnly + "TMP." + fileExt
+      let tempFileName = NSTemporaryDirectory() + nameOnly + String(describing:SceneKitVideoRecorder.segmentsCount) + "TMP." + fileExt
       output = URL(fileURLWithPath: tempFileName)
 
       FileController.move(from: options.outputUrl, to: output)
+        SceneKitVideoRecorder.segmentsCount += 1
     }
 
     return output
