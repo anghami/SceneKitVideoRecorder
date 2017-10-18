@@ -20,8 +20,6 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
   private var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor!
   private var options: Options
 
-  private let frameQueue = DispatchQueue(label: "com.svtek.SceneKitVideoRecorder.frameQueue")
-  private static let renderQueue = DispatchQueue(label: "com.svtek.SceneKitVideoRecorder.renderQueue", attributes: .concurrent)
   private let bufferQueue = DispatchQueue(label: "com.svtek.SceneKitVideoRecorder.bufferQueue", attributes: .concurrent)
   private let audioQueue = DispatchQueue(label: "com.svtek.SceneKitVideoRecorder.audioQueue")
 
@@ -65,6 +63,8 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
   public convenience init(withARSCNView view: ARSCNView, options: Options = .default) throws {
     try self.init(scene: view, options: options)
   }
+    
+    var delegate : SceneKitVideoRecorderDelgate?
 
   public init(scene: SCNView, options: Options = .default) throws {
 
@@ -191,28 +191,20 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
   }
 
   public func startWriting() {
-
-    SceneKitVideoRecorder.renderQueue.async { [weak self] in
-
-      if (self?.isRecording)! { return }
-
-      self?.isRecording = true
-
-      if !(self?.useAudio)! {
-        self?.firstAudioTimestamp = kCMTimeZero
-      }
-
-      self?.startDisplayLink()
-
-      guard self?.startInputPipeline() == true else {
-        print("AVAssetWriter Failed:", "Unknown error")
-        self?.stopDisplayLink()
-        self?.cleanUp()
-        return
-      }
-
+    if (isRecording) { return }
+    
+    isRecording = true
+    
+    if !(useAudio) {
+        firstAudioTimestamp = kCMTimeZero
     }
-
+    
+    guard startInputPipeline() == true else {
+        print("AVAssetWriter Failed:", "Unknown error")
+        stopDisplayLink()
+        cleanUp()
+        return
+    }
   }
 
   public func finishWriting(completionHandler: (@escaping (_ url: URL) -> Void)) {
@@ -221,8 +213,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
     let outputUrl = cleanUp()
 
-    stopDisplayLink()
-
+    
     SceneKitVideoRecorder.bufferAppendSemaphore.wait()
 
     videoInput.markAsFinished()
@@ -269,30 +260,33 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
     return time
   }
 
-  private func startDisplayLink() {
-
-    displayLink = CADisplayLink(target: self, selector: #selector(updateDisplayLink))
-    displayLink?.preferredFramesPerSecond = options.fps
-    displayLink?.add(to: .main, forMode: .commonModes)
-
+  func startDisplayLink()
+  {
+    if self.displayLink != nil {
+        return
+    }
+    self.displayLink = CADisplayLink(target: self, selector: #selector(updateDisplayLink))
+    self.displayLink?.preferredFramesPerSecond = (self.options.fps)
+    self.displayLink?.add(to: .main, forMode: .commonModes)
   }
 
   @objc private func updateDisplayLink() {
 
-    frameQueue.async { [weak self] in
+     if !self.isRecording {
+        self.renderSnapshot()
+        return
+     }
       
-      if self?.writer.status == .unknown { return }
-      if self?.writer.status == .failed { return }
-      guard let input = self?.videoInput, input.isReadyForMoreMediaData else { return }
+      if self.writer.status == .unknown { return }
+      if self.writer.status == .failed { return }
+      guard let input = self.videoInput, input.isReadyForMoreMediaData else { return }
 
-      if !(self?.isSourceTimeSpecified)! {
-        guard let time = self?.getAppendTime(), CMTIME_IS_NUMERIC(time) else { return }
-        self?.writer.startSession(atSourceTime: (self?.getAppendTime())!)
-        self?.isSourceTimeSpecified = true
+      if !self.isSourceTimeSpecified {
+        self.writer.startSession(atSourceTime: (self.getAppendTime()))
+        self.isSourceTimeSpecified = true
       }
 
-      self?.renderSnapshot()
-    }
+      self.renderSnapshot()
 
   }
 
@@ -301,8 +295,6 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
     while CMTIME_IS_INVALID(firstAudioTimestamp) { }
 
     guard writer.startWriting() else { return false }
-
-    videoInput.requestMediaDataWhenReady(on: frameQueue, using: {})
 
     if CMTIME_IS_INVALID(initialTime) {
       initialTime = getCurrentCMTime()
@@ -319,7 +311,13 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
       let time = CACurrentMediaTime()
       let image = renderer.snapshot(atTime: time, with: self.options.videoSize, antialiasingMode: self.options.antialiasingMode)
-
+        
+      self.delegate?.didRenderSnapshot(self, snapshot: image)
+        
+      if !isRecording {
+        return
+      }
+        
       updateFrameHandler?(image)
 
       guard let pool = self.pixelBufferAdaptor.pixelBufferPool else { return }
@@ -374,5 +372,10 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
   }
 
+}
+
+@available(iOS 11.0,*)
+protocol SceneKitVideoRecorderDelgate: class {
+    func didRenderSnapshot(_ recorder: SceneKitVideoRecorder, snapshot: UIImage)
 }
 
