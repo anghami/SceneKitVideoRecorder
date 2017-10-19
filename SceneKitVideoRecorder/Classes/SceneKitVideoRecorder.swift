@@ -311,8 +311,10 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
       let time = CACurrentMediaTime()
       let image = renderer.snapshot(atTime: time, with: self.options.videoSize, antialiasingMode: self.options.antialiasingMode)
-        
-      self.delegate?.didRenderSnapshot(self, snapshot: image)
+      
+      DispatchQueue.main.async {
+        self.delegate?.didRenderSnapshot(self, snapshot: image)
+      }
         
       if !isRecording {
         return
