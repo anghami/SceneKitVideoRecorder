@@ -23,7 +23,7 @@ extension SceneKitVideoRecorder {
 
     public static var `default`: Options {
       return Options(timeScale: 1000,
-                     videoSize: CGSize(width: 720, height: 1280),
+                     videoSize: CGSize(width: 1080, height: 1920),
                      fps: 60,
                      outputUrl: URL(fileURLWithPath: NSTemporaryDirectory() + "output.mp4"),
                      fileType: AVFileType.m4v.rawValue,
