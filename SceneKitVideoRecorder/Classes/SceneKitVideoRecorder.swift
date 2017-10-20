@@ -35,7 +35,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
   private var endingTimestamp: CMTime = kCMTimeInvalid
 
-  private var sceneView: SCNView
+  private weak var sceneView: SCNView?
 
   private var audioSettings: [String : Any]?
 
@@ -64,7 +64,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
     try self.init(scene: view, options: options)
   }
     
-    var delegate : SceneKitVideoRecorderDelgate?
+  weak var delegate : SceneKitVideoRecorderDelgate?
 
   public init(scene: SCNView, options: Options = .default) throws {
 
@@ -111,7 +111,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
 
     guard let device = MTLCreateSystemDefaultDevice() else { return }
     self.renderer = SCNRenderer(device: device, options: nil)
-    renderer.scene = self.sceneView.scene
+    renderer.scene = self.sceneView?.scene
 
     initialTime = kCMTimeInvalid
 
