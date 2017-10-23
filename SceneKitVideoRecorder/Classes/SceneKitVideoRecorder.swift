@@ -367,7 +367,7 @@ public class SceneKitVideoRecorder: NSObject, AVCaptureAudioDataOutputSampleBuff
   }
 
 
-  private func stopDisplayLink() {
+  func stopDisplayLink() {
 
     displayLink?.invalidate()
     displayLink = nil
